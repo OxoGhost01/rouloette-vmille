@@ -31,6 +31,7 @@ export type DishRecord = {
   description: string;
   priceCents: number;
   available: boolean;
+  stock?: number | null;
   category: { id: number; name: string };
   allergens: { code: string; label: string }[];
 };
@@ -44,6 +45,7 @@ export const toDishDto = (d: DishRecord) => ({
   description: d.description,
   priceCents: d.priceCents,
   available: d.available,
+  stock: d.stock ?? null,
   category: { id: d.category.id, name: d.category.name },
   allergens: d.allergens.map((a) => ({ code: a.code, label: a.label })),
 });

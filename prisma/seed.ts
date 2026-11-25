@@ -13,7 +13,7 @@ type Menu = {
     category: string;
     allergens: string[];
     available: boolean;
-    stock: number | null; // chargé à partir du palier 2
+    stock: number | null; // null = illimité
   }[];
   users: { email: string; name: string; password: string; role: "CUSTOMER" | "STAFF" | "ADMIN" }[];
 };
@@ -40,6 +40,7 @@ for (const d of menu.dishes) {
       description: d.description,
       priceCents: d.priceCents,
       available: d.available,
+      stock: d.stock,
       category: { connect: { name: d.category } },
       allergens: { connect: d.allergens.map((code) => ({ code })) },
     },

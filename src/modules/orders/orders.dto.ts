@@ -22,6 +22,8 @@ export const placeOrderSchema = z.strictObject({
 
 export type PlaceOrderInput = z.infer<typeof placeOrderSchema>;
 
+export const updateStatusSchema = z.strictObject({ status: z.enum(ORDER_STATUSES) });
+
 export const orderIdParamSchema = z.strictObject({ id: z.coerce.number().int().min(1) });
 
 export const listOrdersQuerySchema = z.strictObject({
@@ -49,6 +51,12 @@ export type OrderFilter = {
   skip: number;
   take: number;
 };
+
+// Plat dont le stock ne suffit pas : `available` = portions restantes
+export type StockShortage = { dishId: number; available: number };
+
+// Résultat de la création : la commande, ou la liste des plats en rupture (rien n'a alors été consommé)
+export type CreateOrderResult = { order: OrderRecord } | { shortages: StockShortage[] };
 
 export type DishSnapshot = { id: number; name: string; priceCents: number; available: boolean };
 

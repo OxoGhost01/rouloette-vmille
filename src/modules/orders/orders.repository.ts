@@ -1,11 +1,23 @@
 import type { PrismaClient } from "../../generated/prisma/client.js";
-import type { DishSnapshot, NewOrder, OrderFilter, OrderRecord } from "./orders.dto.js";
+import type {
+  CreateOrderResult,
+  DishSnapshot,
+  NewOrder,
+  OrderFilter,
+  OrderRecord,
+  OrderStatus,
+  StockShortage,
+} from "./orders.dto.js";
 
 // DAO des commandes
 export interface OrderRepository {
-  create(order: NewOrder): Promise<OrderRecord>;
+  // Crée la commande ET décrémente le stock, en une transaction : tout ou rien
+  create(order: NewOrder): Promise<CreateOrderResult>;
   findById(id: number): Promise<OrderRecord | null>;
   find(filter: OrderFilter): Promise<{ items: OrderRecord[]; total: number }>;
+  // Change le statut seulement si la commande est encore à `from` (null sinon : quelqu'un l'a modifiée entre-temps).
+  // `restock` remet les portions en stock dans la même transaction (annulation).
+  updateStatus(id: number, from: OrderStatus, to: OrderStatus, restock: boolean): Promise<OrderRecord | null>;
 }
 
 // Lecture des plats nécessaire pour passer commande (prix et disponibilité viennent de la base)
@@ -39,23 +51,70 @@ const toRecord = (o: PrismaOrder): OrderRecord => ({
   })),
 });
 
+// Sert uniquement à annuler la transaction Prisma ; jamais exposée hors de ce fichier
+class StockShortageError extends Error {
+  constructor(readonly shortages: StockShortage[]) {
+    super("Stock insuffisant");
+  }
+}
+
 export class PrismaOrderRepository implements OrderRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
-  // Commande et lignes en une seule écriture
-  async create(order: NewOrder) {
-    const created = await this.prisma.order.create({
-      data: {
-        userId: order.userId,
-        note: order.note,
-        totalCents: order.totalCents,
-        items: {
-          create: order.items.map(({ dishId, quantity, unitPriceCents }) => ({ dishId, quantity, unitPriceCents })),
-        },
-      },
-      include: orderInclude,
+  async create(order: NewOrder): Promise<CreateOrderResult> {
+    try {
+      const created = await this.prisma.$transaction(async (tx) => {
+        const shortages: StockShortage[] = [];
+        for (const { dishId, quantity } of order.items) {
+          // Décrément conditionnel (jamais « lire puis écrire ») : stock illimité (null) ou assez de portions
+          const { count } = await tx.dish.updateMany({
+            where: { id: dishId, OR: [{ stock: null }, { stock: { gte: quantity } }] },
+            data: { stock: { decrement: quantity } },
+          });
+          if (count === 0) {
+            const dish = await tx.dish.findUnique({ where: { id: dishId }, select: { stock: true } });
+            shortages.push({ dishId, available: dish?.stock ?? 0 });
+          }
+        }
+        if (shortages.length > 0) throw new StockShortageError(shortages); // annule la transaction
+
+        // Commande et lignes en une seule écriture
+        return tx.order.create({
+          data: {
+            userId: order.userId,
+            note: order.note,
+            totalCents: order.totalCents,
+            items: {
+              create: order.items.map(({ dishId, quantity, unitPriceCents }) => ({ dishId, quantity, unitPriceCents })),
+            },
+          },
+          include: orderInclude,
+        });
+      });
+      return { order: toRecord(created) };
+    } catch (error) {
+      if (error instanceof StockShortageError) return { shortages: error.shortages };
+      throw error;
+    }
+  }
+
+  async updateStatus(id: number, from: OrderStatus, to: OrderStatus, restock: boolean) {
+    return this.prisma.$transaction(async (tx) => {
+      const { count } = await tx.order.updateMany({ where: { id, status: from }, data: { status: to } });
+      if (count === 0) return null;
+
+      if (restock) {
+        const lines = await tx.orderItem.findMany({ where: { orderId: id } });
+        for (const { dishId, quantity } of lines) {
+          // Un plat à stock illimité (null) n'est pas touché
+          await tx.dish.updateMany({
+            where: { id: dishId, stock: { not: null } },
+            data: { stock: { increment: quantity } },
+          });
+        }
+      }
+      return toRecord(await tx.order.findUniqueOrThrow({ where: { id }, include: orderInclude }));
     });
-    return toRecord(created);
   }
 
   async findById(id: number) {
@@ -99,9 +158,23 @@ export class InMemoryOrderRepository implements OrderRepository {
   private orders: OrderRecord[] = [];
   private nextId = 1;
 
-  constructor(private readonly userName: (id: number) => string = (id) => `Client ${id}`) {}
+  // `stocks` : portions restantes par plat (absent ou null = illimité), comme la colonne Dish.stock
+  constructor(
+    private readonly userName: (id: number) => string = (id) => `Client ${id}`,
+    readonly stocks: Map<number, number | null> = new Map(),
+  ) {}
 
-  async create(order: NewOrder) {
+  async create(order: NewOrder): Promise<CreateOrderResult> {
+    const shortages = order.items.flatMap(({ dishId, quantity }) => {
+      const stock = this.stocks.get(dishId) ?? null;
+      return stock !== null && stock < quantity ? [{ dishId, available: stock }] : [];
+    });
+    if (shortages.length > 0) return { shortages };
+
+    for (const { dishId, quantity } of order.items) {
+      const stock = this.stocks.get(dishId) ?? null;
+      if (stock !== null) this.stocks.set(dishId, stock - quantity);
+    }
     const now = new Date();
     const record: OrderRecord = {
       id: this.nextId++,
@@ -119,7 +192,21 @@ export class InMemoryOrderRepository implements OrderRepository {
       })),
     };
     this.orders.push(record);
-    return record;
+    return { order: record };
+  }
+
+  async updateStatus(id: number, from: OrderStatus, to: OrderStatus, restock: boolean) {
+    const order = this.orders.find((o) => o.id === id);
+    if (!order || order.status !== from) return null;
+    order.status = to;
+    order.updatedAt = new Date();
+    if (restock) {
+      for (const { dishId, quantity } of order.items) {
+        const stock = this.stocks.get(dishId) ?? null;
+        if (stock !== null) this.stocks.set(dishId, stock + quantity);
+      }
+    }
+    return order;
   }
 
   async findById(id: number) {

@@ -1,6 +1,7 @@
 import type { AuthUser } from "../../fourni/auth/index.js";
 import { HttpError } from "../../shared/errors.js";
-import type { ListOrdersQuery, OrderLine, PlaceOrderInput } from "./orders.dto.js";
+import { canTransition, customerCanCancel } from "./order-status.js";
+import type { ListOrdersQuery, OrderLine, OrderStatus, PlaceOrderInput } from "./orders.dto.js";
 import type { DishReader, OrderRepository } from "./orders.repository.js";
 
 // Aucune notion HTTP (req / res) ici : le service ne reçoit que des données.
@@ -30,7 +31,11 @@ export class OrderService {
     });
     const totalCents = items.reduce((sum, i) => sum + i.quantity * i.unitPriceCents, 0);
 
-    return this.orders.create({ userId: user.id, note: input.note ?? null, totalCents, items });
+    const result = await this.orders.create({ userId: user.id, note: input.note ?? null, totalCents, items });
+    if ("shortages" in result) {
+      throw new HttpError(409, "OUT_OF_STOCK", "Stock insuffisant", result.shortages);
+    }
+    return result.order;
   }
 
   async list(user: AuthUser, query: ListOrdersQuery) {
@@ -52,4 +57,25 @@ export class OrderService {
     }
     return order;
   }
+
+  // Cuisine et admin font avancer ou annulent ; un client annule seulement sa commande, tant qu'elle est RECEIVED
+  async changeStatus(user: AuthUser, id: number, status: OrderStatus) {
+    const order = await this.getFor(user, id); // 404 si absente ou d'un autre client
+
+    if (user.role === "CUSTOMER") {
+      if (status !== "CANCELLED") throw new HttpError(403, "FORBIDDEN", "Un client ne peut qu'annuler sa commande");
+      if (!customerCanCancel(order.status)) throw invalidTransition(order.status, status);
+    } else if (!canTransition(order.status, status)) {
+      throw invalidTransition(order.status, status);
+    }
+
+    // Annuler remet les portions en stock, dans la même transaction que le changement de statut
+    const updated = await this.orders.updateStatus(id, order.status, status, status === "CANCELLED");
+    if (!updated) throw invalidTransition(order.status, status); // modifiée entre-temps par quelqu'un d'autre
+    return updated;
+  }
+}
+
+function invalidTransition(from: OrderStatus, to: OrderStatus) {
+  return new HttpError(409, "INVALID_TRANSITION", `Passage de ${from} à ${to} impossible`);
 }

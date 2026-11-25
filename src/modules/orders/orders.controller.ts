@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 import { currentUser } from "../../fourni/auth/index.js";
 import { parse } from "../../shared/validation.js";
-import { listOrdersQuerySchema, orderIdParamSchema, placeOrderSchema, toOrderDto } from "./orders.dto.js";
+import { listOrdersQuerySchema, orderIdParamSchema, placeOrderSchema, toOrderDto, updateStatusSchema } from "./orders.dto.js";
 import type { OrderService } from "./orders.service.js";
 
 export class OrderController {
@@ -20,5 +20,11 @@ export class OrderController {
   get = async (req: Request, res: Response) => {
     const { id } = parse(orderIdParamSchema, req.params);
     res.json(toOrderDto(await this.service.getFor(currentUser(req), id)));
+  };
+
+  changeStatus = async (req: Request, res: Response) => {
+    const { id } = parse(orderIdParamSchema, req.params);
+    const { status } = parse(updateStatusSchema, req.body);
+    res.json(toOrderDto(await this.service.changeStatus(currentUser(req), id, status)));
   };
 }
