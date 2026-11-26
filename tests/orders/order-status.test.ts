@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { canTransition, customerCanCancel } from "../src/modules/orders/order-status.js";
-import { ORDER_STATUSES, type OrderStatus } from "../src/modules/orders/orders.dto.js";
+import { canTransition, customerCanCancel } from "../../src/modules/orders/order-status.js";
+import { ORDER_STATUSES, type OrderStatus } from "../../src/modules/orders/orders.model.js";
 
 describe("machine à états des commandes", () => {
   it("autorise exactement les transitions du contrat", () => {

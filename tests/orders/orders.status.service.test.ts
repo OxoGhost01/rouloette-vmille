@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
-import type { DishSnapshot } from "../src/modules/menu/menu.dto.js";
-import type { OrderRecord } from "../src/modules/orders/orders.dto.js";
-import { InMemoryOrderRepository } from "../src/modules/orders/orders.repository.js";
-import { OrderService } from "../src/modules/orders/orders.service.js";
-import { menuWith } from "./support.js";
+import type { DishSnapshot } from "../../src/modules/menu/menu.model.js";
+import type { OrderRecord } from "../../src/modules/orders/orders.model.js";
+import { InMemoryOrderRepository } from "../../src/modules/orders/orders.repository.js";
+import { OrderService } from "../../src/modules/orders/orders.service.js";
+import { menuWith } from "../support/menu.js";
 
 const dish = (id: number): DishSnapshot => ({ id, name: `Plat ${id}`, priceCents: 500, available: true });
 const alice = { id: 1, role: "CUSTOMER" as const };

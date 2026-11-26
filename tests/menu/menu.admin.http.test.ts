@@ -1,11 +1,11 @@
 import request from "supertest";
 import { beforeEach, describe, expect, it } from "vitest";
-import { createApp } from "../src/app.js";
-import { loadConfig } from "../src/config.js";
-import { createTestContainer } from "../src/container.js";
-import { hashPassword, type Role } from "../src/fourni/auth/index.js";
-import { InMemoryMenuRepository } from "../src/modules/menu/menu.repository.js";
-import { InMemoryUserRepository } from "../src/modules/users/user.repository.js";
+import { createApp } from "../../src/app.js";
+import { loadConfig } from "../../src/config.js";
+import { createTestContainer } from "../../src/container.js";
+import { hashPassword, type Role } from "../../src/fourni/auth/index.js";
+import { InMemoryMenuRepository } from "../../src/modules/menu/menu.repository.js";
+import { InMemoryUserRepository } from "../../src/modules/users/user.repository.js";
 
 const config = loadConfig({ DATABASE_URL: "file:./test.db", JWT_SECRET: "test-secret-0123456789" });
 

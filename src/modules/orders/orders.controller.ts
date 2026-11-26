@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
 import { currentUser } from "../../fourni/auth/index.js";
+import { mapPage } from "../../shared/pagination.js";
 import { idParamSchema, parse } from "../../shared/validation.js";
 import { listOrdersQuerySchema, placeOrderSchema, toOrderDto, updateStatusSchema } from "./orders.dto.js";
 import type { OrderService } from "./orders.service.js";
@@ -14,7 +15,7 @@ export class OrderController {
 
   list = async (req: Request, res: Response) => {
     const page = await this.service.list(currentUser(req), parse(listOrdersQuerySchema, req.query));
-    res.json({ ...page, items: page.items.map(toOrderDto) });
+    res.json(mapPage(page, toOrderDto));
   };
 
   get = async (req: Request, res: Response) => {

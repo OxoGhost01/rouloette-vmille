@@ -1,12 +1,12 @@
 import request from "supertest";
 import { beforeEach, describe, expect, it } from "vitest";
-import { createApp } from "../src/app.js";
-import { loadConfig } from "../src/config.js";
-import { createTestContainer } from "../src/container.js";
-import { hashPassword } from "../src/fourni/auth/index.js";
-import { InMemoryOrderRepository } from "../src/modules/orders/orders.repository.js";
-import { InMemoryUserRepository } from "../src/modules/users/user.repository.js";
-import { menuWith } from "./support.js";
+import { createApp } from "../../src/app.js";
+import { loadConfig } from "../../src/config.js";
+import { createTestContainer } from "../../src/container.js";
+import { hashPassword } from "../../src/fourni/auth/index.js";
+import { InMemoryOrderRepository } from "../../src/modules/orders/orders.repository.js";
+import { InMemoryUserRepository } from "../../src/modules/users/user.repository.js";
+import { menuWith } from "../support/menu.js";
 
 const config = loadConfig({ DATABASE_URL: "file:./test.db", JWT_SECRET: "test-secret-0123456789" });
 const dishes = [

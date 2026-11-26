@@ -1,17 +1,5 @@
 import type { ErrorRequestHandler, RequestHandler } from "express";
-
-// Erreur métier ou HTTP, rendue au format du contrat : { error: { code, message, details? } }
-export class HttpError extends Error {
-  constructor(
-    public readonly status: number,
-    public readonly code: string,
-    message: string,
-    public readonly details?: unknown,
-  ) {
-    super(message);
-    this.name = "HttpError";
-  }
-}
+import { HttpError } from "./http-error.js";
 
 export const notFoundHandler: RequestHandler = (_req, _res, next) => {
   next(new HttpError(404, "NOT_FOUND", "Route introuvable"));

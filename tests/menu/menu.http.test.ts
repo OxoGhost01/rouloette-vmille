@@ -1,9 +1,9 @@
 import request from "supertest";
 import { describe, expect, it } from "vitest";
-import { createApp } from "../src/app.js";
-import { loadConfig } from "../src/config.js";
-import { createTestContainer } from "../src/container.js";
-import { InMemoryMenuRepository } from "../src/modules/menu/menu.repository.js";
+import { createApp } from "../../src/app.js";
+import { loadConfig } from "../../src/config.js";
+import { createTestContainer } from "../../src/container.js";
+import { InMemoryMenuRepository } from "../../src/modules/menu/menu.repository.js";
 
 const burgers = { id: 1, name: "Burgers", position: 1 };
 const boissons = { id: 2, name: "Boissons", position: 2 };

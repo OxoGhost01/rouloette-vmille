@@ -1,4 +1,4 @@
-import type { OrderStatus } from "./orders.dto.js";
+import type { OrderStatus } from "./orders.model.js";
 
 // Machine à états des commandes : les transitions autorisées sont décrites ICI, et nulle part ailleurs.
 const TRANSITIONS: Record<OrderStatus, readonly OrderStatus[]> = {

@@ -1,4 +1,5 @@
 import type { Request, Response } from "express";
+import { mapPage } from "../../shared/pagination.js";
 import { idParamSchema, parse } from "../../shared/validation.js";
 import {
   createDishSchema,
@@ -22,8 +23,7 @@ export class MenuController {
   };
 
   listDishes = async (req: Request, res: Response) => {
-    const page = await this.service.listDishes(parse(listDishesQuerySchema, req.query));
-    res.json({ ...page, items: page.items.map(toDishDto) });
+    res.json(mapPage(await this.service.listDishes(parse(listDishesQuerySchema, req.query)), toDishDto));
   };
 
   getDish = async (req: Request, res: Response) => {

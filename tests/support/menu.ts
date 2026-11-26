@@ -1,5 +1,5 @@
-import type { DishSnapshot } from "../src/modules/menu/menu.dto.js";
-import { InMemoryMenuRepository } from "../src/modules/menu/menu.repository.js";
+import type { DishSnapshot } from "../../src/modules/menu/menu.model.js";
+import { InMemoryMenuRepository } from "../../src/modules/menu/menu.repository.js";
 
 // Carte en mémoire à partir de plats minimaux (id, nom, prix, disponibilité)
 export const menuWith = (dishes: DishSnapshot[] = []) =>

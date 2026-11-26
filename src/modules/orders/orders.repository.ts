@@ -6,7 +6,7 @@ import type {
   OrderRecord,
   OrderStatus,
   StockShortage,
-} from "./orders.dto.js";
+} from "./orders.model.js";
 
 // DAO des commandes
 export interface OrderRepository {

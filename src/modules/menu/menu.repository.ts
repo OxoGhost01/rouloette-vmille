@@ -7,10 +7,9 @@ import type {
   DishRecord,
   DishSnapshot,
   NewDish,
-} from "./menu.dto.js";
-
-export type DishWrite = { status: "ok"; dish: DishRecord } | { status: "name_taken" | "not_found" };
-export type DishDelete = "deleted" | "not_found" | "ordered";
+  DishDelete,
+  DishWrite,
+} from "./menu.model.js";
 
 // DAO : le service ne connaît que cette interface
 export interface MenuRepository {

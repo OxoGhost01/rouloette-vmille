@@ -1,9 +1,9 @@
 import type { AuthUser } from "../../fourni/auth/index.js";
-import { HttpError } from "../../shared/errors.js";
+import { HttpError } from "../../shared/http-error.js";
 import { pageWindow, toPage } from "../../shared/pagination.js";
 import type { MenuRepository } from "../menu/menu.repository.js";
 import { canTransition, customerCanCancel } from "./order-status.js";
-import type { ListOrdersQuery, OrderLine, OrderStatus, PlaceOrderInput } from "./orders.dto.js";
+import type { OrderLine, OrderSearch, OrderStatus, PlaceOrder } from "./orders.model.js";
 import type { OrderRepository } from "./orders.repository.js";
 
 // Aucune notion HTTP (req / res) ici : le service ne reçoit que des données.
@@ -13,7 +13,7 @@ export class OrderService {
     private readonly dishes: Pick<MenuRepository, "findDishesByIds">,
   ) {}
 
-  async place(user: AuthUser, input: PlaceOrderInput) {
+  async place(user: AuthUser, input: PlaceOrder) {
     const found = new Map((await this.dishes.findDishesByIds(input.items.map((i) => i.dishId))).map((d) => [d.id, d]));
 
     // Tous les plats refusés sont signalés d'un coup
@@ -40,20 +40,20 @@ export class OrderService {
     return result.order;
   }
 
-  async list(user: AuthUser, query: ListOrdersQuery) {
+  async list(user: AuthUser, search: OrderSearch) {
     const { items, total } = await this.orders.find({
-      userId: user.role === "CUSTOMER" ? user.id : undefined,
-      statuses: query.status,
-      newestFirst: query.sort === "-createdAt",
-      ...pageWindow(query),
+      userId: isCustomer(user) ? user.id : undefined,
+      statuses: search.statuses,
+      newestFirst: search.newestFirst,
+      ...pageWindow(search),
     });
-    return toPage(items, total, query);
+    return toPage(items, total, search);
   }
 
   // Un client ne voit que ses commandes : celle d'un autre répond 404, pas 403
   async getFor(user: AuthUser, id: number) {
     const order = await this.orders.findById(id);
-    if (!order || (user.role === "CUSTOMER" && order.user.id !== user.id)) {
+    if (!order || (isCustomer(user) && order.user.id !== user.id)) {
       throw new HttpError(404, "NOT_FOUND", "Commande introuvable");
     }
     return order;
@@ -63,7 +63,7 @@ export class OrderService {
   async changeStatus(user: AuthUser, id: number, status: OrderStatus) {
     const order = await this.getFor(user, id); // 404 si absente ou d'un autre client
 
-    if (user.role === "CUSTOMER") {
+    if (isCustomer(user)) {
       if (status !== "CANCELLED") throw new HttpError(403, "FORBIDDEN", "Un client ne peut qu'annuler sa commande");
       if (!customerCanCancel(order.status)) throw invalidTransition(order.status, status);
     } else if (!canTransition(order.status, status)) {
@@ -76,6 +76,8 @@ export class OrderService {
     return updated;
   }
 }
+
+const isCustomer = (user: AuthUser) => user.role === "CUSTOMER";
 
 function invalidTransition(from: OrderStatus, to: OrderStatus) {
   return new HttpError(409, "INVALID_TRANSITION", `Passage de ${from} à ${to} impossible`);

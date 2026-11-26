@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
-import type { DishRecord } from "../src/modules/menu/menu.dto.js";
-import { InMemoryMenuRepository } from "../src/modules/menu/menu.repository.js";
-import { MenuService } from "../src/modules/menu/menu.service.js";
+import type { DishRecord } from "../../src/modules/menu/menu.model.js";
+import { InMemoryMenuRepository } from "../../src/modules/menu/menu.repository.js";
+import { MenuService } from "../../src/modules/menu/menu.service.js";
 
 const desserts = { id: 1, name: "Desserts", position: 1 };
 const gluten = { id: 1, code: "gluten", label: "Gluten" };

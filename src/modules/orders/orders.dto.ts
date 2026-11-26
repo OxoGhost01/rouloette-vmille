@@ -1,10 +1,9 @@
 import { z } from "zod";
-import { paginationShape } from "../../shared/pagination.js";
-
-export const ORDER_STATUSES = ["RECEIVED", "PREPARING", "READY", "PICKED_UP", "CANCELLED"] as const;
-export type OrderStatus = (typeof ORDER_STATUSES)[number];
+import { paginationShape } from "../../shared/validation.js";
+import { ORDER_STATUSES, type OrderRecord, type OrderSearch, type OrderStatus, type PlaceOrder } from "./orders.model.js";
 
 // ---- Entrée : schémas stricts (role, unitPriceCents, totalCents… sont refusés) ----
+
 export const placeOrderSchema = z.strictObject({
   items: z
     .array(
@@ -19,56 +18,44 @@ export const placeOrderSchema = z.strictObject({
       message: "Un plat ne peut apparaître qu'une fois",
     }),
   note: z.string().max(200).optional(),
-});
+}) satisfies z.ZodType<PlaceOrder>;
 
-export type PlaceOrderInput = z.infer<typeof placeOrderSchema>;
+export const updateStatusSchema = z.strictObject({ status: z.enum(ORDER_STATUSES) }) satisfies z.ZodType<{
+  status: OrderStatus;
+}>;
 
-export const updateStatusSchema = z.strictObject({ status: z.enum(ORDER_STATUSES) });
+// Le contrat parle de `status=A,B` et `sort=-createdAt` ; le service reçoit des valeurs du domaine
+export const listOrdersQuerySchema = z
+  .strictObject({
+    status: z
+      .string()
+      .transform((s) => s.split(","))
+      .pipe(z.array(z.enum(ORDER_STATUSES)).min(1))
+      .optional(),
+    sort: z.enum(["createdAt", "-createdAt"]).default("-createdAt"),
+    ...paginationShape,
+  })
+  .transform(({ status, sort, page, pageSize }) => ({
+    statuses: status,
+    newestFirst: sort === "-createdAt",
+    page,
+    pageSize,
+  })) satisfies z.ZodType<OrderSearch>;
 
-export const listOrdersQuerySchema = z.strictObject({
-  status: z
-    .string()
-    .transform((s) => s.split(","))
-    .pipe(z.array(z.enum(ORDER_STATUSES)).min(1))
-    .optional(),
-  sort: z.enum(["createdAt", "-createdAt"]).default("-createdAt"),
-  ...paginationShape,
-});
+// ---- Sortie : chaque champ est choisi explicitement ----
 
-export type ListOrdersQuery = z.infer<typeof listOrdersQuerySchema>;
-
-// ---- Échanges service <-> repository ----
-export type OrderLine = { dishId: number; name: string; quantity: number; unitPriceCents: number };
-
-export type NewOrder = { userId: number; note: string | null; totalCents: number; items: OrderLine[] };
-
-export type OrderFilter = {
-  userId?: number; // absent : toutes les commandes (cuisine, admin)
-  statuses?: OrderStatus[];
-  newestFirst: boolean;
-  skip: number;
-  take: number;
-};
-
-// Plat dont le stock ne suffit pas : `available` = portions restantes
-export type StockShortage = { dishId: number; available: number };
-
-// Résultat de la création : la commande, ou la liste des plats en rupture (rien n'a alors été consommé)
-export type CreateOrderResult = { order: OrderRecord } | { shortages: StockShortage[] };
-
-// ---- Sortie ----
-export type OrderRecord = {
+export type OrderDto = {
   id: number;
   status: OrderStatus;
   note: string | null;
   totalCents: number;
-  createdAt: Date;
-  updatedAt: Date;
-  user: { id: number; name: string };
-  items: { dishId: number; name: string; quantity: number; unitPriceCents: number }[];
+  createdAt: string;
+  updatedAt: string;
+  customer: { id: number; name: string };
+  items: { dishId: number; name: string; quantity: number; unitPriceCents: number; lineTotalCents: number }[];
 };
 
-export const toOrderDto = (o: OrderRecord) => ({
+export const toOrderDto = (o: OrderRecord): OrderDto => ({
   id: o.id,
   status: o.status,
   note: o.note,

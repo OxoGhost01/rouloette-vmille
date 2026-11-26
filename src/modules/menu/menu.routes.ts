@@ -6,9 +6,6 @@ import type { MenuController } from "./menu.controller.js";
 export function menuRoutes(c: MenuController, auth: Auth) {
   const router = Router();
   const admin = [auth.requireAuth, auth.requireRole("ADMIN")];
-  router.get("/health", (_req, res) => {
-    res.json({ status: "ok" });
-  });
   router.get("/categories", c.listCategories);
   router.get("/allergens", c.listAllergens);
   router.get("/dishes", c.listDishes);

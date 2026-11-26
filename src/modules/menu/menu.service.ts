@@ -1,6 +1,6 @@
-import { HttpError } from "../../shared/errors.js";
+import { HttpError } from "../../shared/http-error.js";
 import { pageWindow, toPage } from "../../shared/pagination.js";
-import type { CreateDishInput, ListDishesQuery, UpdateDishInput } from "./menu.dto.js";
+import type { DishInput, DishPatch, DishSearch } from "./menu.model.js";
 import type { MenuRepository } from "./menu.repository.js";
 
 // Aucune notion HTTP (req / res) ici : le service ne reçoit que des données.
@@ -15,19 +15,15 @@ export class MenuService {
     return this.menu.listAllergens();
   }
 
-  async listDishes(query: ListDishesQuery) {
-    const codes = query.allergenFree
-      ?.split(",")
-      .map((c) => c.trim())
-      .filter(Boolean);
+  async listDishes(search: DishSearch) {
     const { items, total } = await this.menu.findDishes({
-      categoryId: query.category,
-      available: query.available === undefined ? undefined : query.available === "true",
-      allergenFreeCodes: codes,
-      q: query.q,
-      ...pageWindow(query),
+      categoryId: search.category,
+      available: search.available,
+      allergenFreeCodes: search.allergenFree,
+      q: search.q,
+      ...pageWindow(search),
     });
-    return toPage(items, total, query);
+    return toPage(items, total, search);
   }
 
   async getDish(id: number) {
@@ -36,7 +32,7 @@ export class MenuService {
     return dish;
   }
 
-  async createDish(input: CreateDishInput) {
+  async createDish(input: DishInput) {
     await this.assertReferences(input.categoryId, input.allergens);
     const result = await this.menu.createDish({
       name: input.name,
@@ -51,9 +47,9 @@ export class MenuService {
     throw nameTaken();
   }
 
-  async updateDish(id: number, input: UpdateDishInput) {
-    await this.assertReferences(input.categoryId, input.allergens);
-    const result = await this.menu.updateDish(id, input);
+  async updateDish(id: number, patch: DishPatch) {
+    await this.assertReferences(patch.categoryId, patch.allergens);
+    const result = await this.menu.updateDish(id, patch);
     if (result.status === "ok") return result.dish;
     throw result.status === "not_found" ? dishNotFound() : nameTaken();
   }

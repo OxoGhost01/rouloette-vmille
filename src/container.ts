@@ -1,6 +1,8 @@
 import type { Router } from "express";
 import type { Config } from "./config.js";
 import { createAuth } from "./fourni/auth/index.js";
+import { HealthController } from "./modules/health/health.controller.js";
+import { healthRoutes } from "./modules/health/health.routes.js";
 import { MenuController } from "./modules/menu/menu.controller.js";
 import { InMemoryMenuRepository, PrismaMenuRepository, type MenuRepository } from "./modules/menu/menu.repository.js";
 import { menuRoutes } from "./modules/menu/menu.routes.js";
@@ -32,6 +34,7 @@ export function createContainer(config: Config, overrides: Overrides = {}) {
   const auth = createAuth({ users, jwtSecret: config.JWT_SECRET, jwtExpiresIn: config.JWT_EXPIRES_IN });
 
   const routes: Array<[path: string, router: Router]> = [
+    ["/", healthRoutes(new HealthController())],
     ["/", menuRoutes(new MenuController(new MenuService(menu)), auth)],
     ["/orders", orderRoutes(new OrderController(new OrderService(orders, menu)), auth)],
   ];
