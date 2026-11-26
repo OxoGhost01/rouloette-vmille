@@ -10,6 +10,9 @@ function fakeRepo(overrides: Partial<MenuRepository> = {}): MenuRepository {
     listAllergens: async () => [],
     findDishes: async () => ({ items: [], total: 0 }),
     findDishById: async () => null,
+    createDish: async () => ({ status: "not_found" }),
+    updateDish: async () => ({ status: "not_found" }),
+    deleteDish: async () => "not_found",
     ...overrides,
   };
 }

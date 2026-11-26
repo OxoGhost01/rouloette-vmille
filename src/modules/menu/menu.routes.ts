@@ -1,8 +1,9 @@
 import { Router } from "express";
+import type { Auth } from "../../fourni/auth/index.js";
 import type { MenuController } from "./menu.controller.js";
 
-// Routes publiques de la carte. Les routes admin (POST/PATCH/DELETE /dishes) arrivent au palier 2.
-export function menuRoutes(c: MenuController) {
+// Lecture publique de la carte ; écriture réservée à l'administratrice.
+export function menuRoutes(c: MenuController, auth: Auth) {
   const router = Router();
   router.get("/health", (_req, res) => {
     res.json({ status: "ok" });
@@ -11,5 +12,8 @@ export function menuRoutes(c: MenuController) {
   router.get("/allergens", c.listAllergens);
   router.get("/dishes", c.listDishes);
   router.get("/dishes/:id", c.getDish);
+  router.post("/dishes", auth.requireAuth, auth.requireRole("ADMIN"), c.createDish);
+  router.patch("/dishes/:id", auth.requireAuth, auth.requireRole("ADMIN"), c.updateDish);
+  router.delete("/dishes/:id", auth.requireAuth, auth.requireRole("ADMIN"), c.deleteDish);
   return router;
 }

@@ -34,7 +34,7 @@ export function createContainer(config: Config, overrides: Overrides = {}) {
   const auth = createAuth({ users, jwtSecret: config.JWT_SECRET, jwtExpiresIn: config.JWT_EXPIRES_IN });
 
   const routes: Array<[path: string, router: Router]> = [];
-  routes.push(["/", menuRoutes(new MenuController(new MenuService(menu)))]);
+  routes.push(["/", menuRoutes(new MenuController(new MenuService(menu)), auth)]);
 
   routes.push(["/orders", orderRoutes(new OrderController(new OrderService(orders, orderDishes)), auth)]);
 

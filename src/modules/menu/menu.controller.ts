@@ -1,6 +1,14 @@
 import type { Request, Response } from "express";
 import { parse } from "../../shared/validation.js";
-import { idParamSchema, listDishesQuerySchema, toAllergenDto, toCategoryDto, toDishDto } from "./menu.dto.js";
+import {
+  createDishSchema,
+  idParamSchema,
+  listDishesQuerySchema,
+  toAllergenDto,
+  toCategoryDto,
+  toDishDto,
+  updateDishSchema,
+} from "./menu.dto.js";
 import type { MenuService } from "./menu.service.js";
 
 export class MenuController {
@@ -22,5 +30,21 @@ export class MenuController {
   getDish = async (req: Request, res: Response) => {
     const { id } = parse(idParamSchema, req.params);
     res.json(toDishDto(await this.service.getDish(id)));
+  };
+
+  createDish = async (req: Request, res: Response) => {
+    const dish = await this.service.createDish(parse(createDishSchema, req.body));
+    res.status(201).location(`/dishes/${dish.id}`).json(toDishDto(dish));
+  };
+
+  updateDish = async (req: Request, res: Response) => {
+    const { id } = parse(idParamSchema, req.params);
+    res.json(toDishDto(await this.service.updateDish(id, parse(updateDishSchema, req.body))));
+  };
+
+  deleteDish = async (req: Request, res: Response) => {
+    const { id } = parse(idParamSchema, req.params);
+    await this.service.deleteDish(id);
+    res.status(204).end();
   };
 }
