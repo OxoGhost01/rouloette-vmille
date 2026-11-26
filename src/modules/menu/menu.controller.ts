@@ -1,8 +1,7 @@
 import type { Request, Response } from "express";
-import { parse } from "../../shared/validation.js";
+import { idParamSchema, parse } from "../../shared/validation.js";
 import {
   createDishSchema,
-  idParamSchema,
   listDishesQuerySchema,
   toAllergenDto,
   toCategoryDto,

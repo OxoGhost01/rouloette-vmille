@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
-import type { DishSnapshot, OrderRecord } from "../src/modules/orders/orders.dto.js";
-import { InMemoryDishReader, InMemoryOrderRepository } from "../src/modules/orders/orders.repository.js";
+import type { DishSnapshot } from "../src/modules/menu/menu.dto.js";
+import type { OrderRecord } from "../src/modules/orders/orders.dto.js";
+import { InMemoryOrderRepository } from "../src/modules/orders/orders.repository.js";
 import { OrderService } from "../src/modules/orders/orders.service.js";
+import { menuWith } from "./support.js";
 
 const dish = (id: number, priceCents: number, available = true): DishSnapshot => ({
   id,
@@ -14,13 +16,13 @@ const autre = { id: 2, role: "CUSTOMER" as const };
 
 function setup(dishes: DishSnapshot[]) {
   const orders = new InMemoryOrderRepository();
-  return { orders, service: new OrderService(orders, new InMemoryDishReader(dishes)) };
+  return { orders, service: new OrderService(orders, menuWith(dishes)) };
 }
 
 describe("OrderService.place", () => {
   it("prend les prix dans la base et calcule le total", async () => {
     const orders = { create: vi.fn(async (data) => ({ id: 1, ...data })), findById: vi.fn(), find: vi.fn() };
-    const dishes = { findByIds: async () => [dish(1, 1000), dish(2, 250)] };
+    const dishes = { findDishesByIds: async () => [dish(1, 1000), dish(2, 250)] };
     const service = new OrderService(orders as never, dishes);
 
     await service.place(client, {

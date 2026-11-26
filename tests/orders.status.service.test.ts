@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
-import type { DishSnapshot, OrderRecord } from "../src/modules/orders/orders.dto.js";
-import { InMemoryDishReader, InMemoryOrderRepository } from "../src/modules/orders/orders.repository.js";
+import type { DishSnapshot } from "../src/modules/menu/menu.dto.js";
+import type { OrderRecord } from "../src/modules/orders/orders.dto.js";
+import { InMemoryOrderRepository } from "../src/modules/orders/orders.repository.js";
 import { OrderService } from "../src/modules/orders/orders.service.js";
+import { menuWith } from "./support.js";
 
 const dish = (id: number): DishSnapshot => ({ id, name: `Plat ${id}`, priceCents: 500, available: true });
 const alice = { id: 1, role: "CUSTOMER" as const };
@@ -10,7 +12,7 @@ const staff = { id: 3, role: "STAFF" as const };
 
 function setup(stocks: Array<[number, number | null]> = []) {
   const orders = new InMemoryOrderRepository(undefined, new Map(stocks));
-  const service = new OrderService(orders, new InMemoryDishReader([dish(1), dish(2)]));
+  const service = new OrderService(orders, menuWith([dish(1), dish(2)]));
   return { orders, service };
 }
 
@@ -58,7 +60,7 @@ describe("OrderService.changeStatus", () => {
     const updateStatus = vi.fn(async () => ({ id: 1, status: "X" }) as unknown as OrderRecord);
     const found = { id: 1, status: "RECEIVED", user: { id: 1, name: "A" } };
     const repo = { findById: async () => found, updateStatus };
-    const service = new OrderService(repo as never, new InMemoryDishReader());
+    const service = new OrderService(repo as never, menuWith());
 
     await service.changeStatus(staff, 1, "PREPARING");
     await service.changeStatus(staff, 1, "CANCELLED");
@@ -70,7 +72,7 @@ describe("OrderService.changeStatus", () => {
   it("répond 409 si la commande a changé de statut entre la lecture et l'écriture", async () => {
     const found = { id: 1, status: "RECEIVED", user: { id: 1, name: "A" } };
     const repo = { findById: async () => found, updateStatus: async () => null };
-    const service = new OrderService(repo as never, new InMemoryDishReader());
+    const service = new OrderService(repo as never, menuWith());
     await expect(service.changeStatus(staff, 1, "PREPARING")).rejects.toMatchObject({ code: "INVALID_TRANSITION" });
   });
 });

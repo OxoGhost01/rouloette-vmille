@@ -1,15 +1,14 @@
 import { z } from "zod";
+import { paginationShape } from "../../shared/pagination.js";
 
 // ---- Entrée : schémas stricts ----
-export const idParamSchema = z.strictObject({ id: z.coerce.number().int().min(1) });
 
 export const listDishesQuerySchema = z.strictObject({
   category: z.coerce.number().int().min(1).optional(),
   available: z.enum(["true", "false"]).optional(),
   allergenFree: z.string().optional(),
   q: z.string().max(50).optional(),
-  page: z.coerce.number().int().min(1).default(1),
-  pageSize: z.coerce.number().int().min(1).max(50).default(20),
+  ...paginationShape,
 });
 
 export type ListDishesQuery = z.infer<typeof listDishesQuerySchema>;
@@ -20,7 +19,7 @@ const dishFields = {
   description: z.string().max(300),
   priceCents: z.number().int().min(50).max(10000),
   categoryId: z.number().int(),
-  allergens: z.array(z.string()),
+  allergens: z.array(z.string()).transform((codes) => [...new Set(codes)]), // sans doublon
   available: z.boolean(),
   stock: z.number().int().min(0).nullable(),
 };
@@ -64,6 +63,9 @@ export type DishFilter = {
   skip: number;
   take: number;
 };
+
+// Plat tel que le voit une commande : prix et disponibilité suffisent
+export type DishSnapshot = Pick<DishRecord, "id" | "name" | "priceCents" | "available">;
 
 // ---- Sortie ----
 export type DishRecord = {

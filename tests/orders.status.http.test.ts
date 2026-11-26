@@ -4,8 +4,9 @@ import { createApp } from "../src/app.js";
 import { loadConfig } from "../src/config.js";
 import { createTestContainer } from "../src/container.js";
 import { hashPassword } from "../src/fourni/auth/index.js";
-import { InMemoryDishReader, InMemoryOrderRepository } from "../src/modules/orders/orders.repository.js";
+import { InMemoryOrderRepository } from "../src/modules/orders/orders.repository.js";
 import { InMemoryUserRepository } from "../src/modules/users/user.repository.js";
+import { menuWith } from "./support.js";
 
 const config = loadConfig({ DATABASE_URL: "file:./test.db", JWT_SECRET: "test-secret-0123456789" });
 const dishes = [
@@ -45,7 +46,7 @@ beforeEach(async () => {
     createTestContainer(config, {
       users,
       orders: new InMemoryOrderRepository(undefined, stocks),
-      orderDishes: new InMemoryDishReader(dishes),
+      menu: menuWith(dishes),
     }),
   );
 });

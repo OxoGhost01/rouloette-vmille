@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { paginationShape } from "../../shared/pagination.js";
 
 export const ORDER_STATUSES = ["RECEIVED", "PREPARING", "READY", "PICKED_UP", "CANCELLED"] as const;
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
@@ -24,8 +25,6 @@ export type PlaceOrderInput = z.infer<typeof placeOrderSchema>;
 
 export const updateStatusSchema = z.strictObject({ status: z.enum(ORDER_STATUSES) });
 
-export const orderIdParamSchema = z.strictObject({ id: z.coerce.number().int().min(1) });
-
 export const listOrdersQuerySchema = z.strictObject({
   status: z
     .string()
@@ -33,8 +32,7 @@ export const listOrdersQuerySchema = z.strictObject({
     .pipe(z.array(z.enum(ORDER_STATUSES)).min(1))
     .optional(),
   sort: z.enum(["createdAt", "-createdAt"]).default("-createdAt"),
-  page: z.coerce.number().int().min(1).default(1),
-  pageSize: z.coerce.number().int().min(1).max(50).default(20),
+  ...paginationShape,
 });
 
 export type ListOrdersQuery = z.infer<typeof listOrdersQuerySchema>;
@@ -57,8 +55,6 @@ export type StockShortage = { dishId: number; available: number };
 
 // Résultat de la création : la commande, ou la liste des plats en rupture (rien n'a alors été consommé)
 export type CreateOrderResult = { order: OrderRecord } | { shortages: StockShortage[] };
-
-export type DishSnapshot = { id: number; name: string; priceCents: number; available: boolean };
 
 // ---- Sortie ----
 export type OrderRecord = {

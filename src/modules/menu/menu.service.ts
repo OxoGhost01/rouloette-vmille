@@ -1,5 +1,6 @@
 import { HttpError } from "../../shared/errors.js";
-import type { CreateDishInput, DishPatch, ListDishesQuery, UpdateDishInput } from "./menu.dto.js";
+import { pageWindow, toPage } from "../../shared/pagination.js";
+import type { CreateDishInput, ListDishesQuery, UpdateDishInput } from "./menu.dto.js";
 import type { MenuRepository } from "./menu.repository.js";
 
 // Aucune notion HTTP (req / res) ici : le service ne reçoit que des données.
@@ -24,10 +25,9 @@ export class MenuService {
       available: query.available === undefined ? undefined : query.available === "true",
       allergenFreeCodes: codes,
       q: query.q,
-      skip: (query.page - 1) * query.pageSize,
-      take: query.pageSize,
+      ...pageWindow(query),
     });
-    return { items, total, page: query.page, pageSize: query.pageSize };
+    return toPage(items, total, query);
   }
 
   async getDish(id: number) {
@@ -43,7 +43,7 @@ export class MenuService {
       priceCents: input.priceCents,
       categoryId: input.categoryId,
       description: input.description ?? "",
-      allergens: [...new Set(input.allergens ?? [])],
+      allergens: input.allergens ?? [],
       available: input.available ?? true,
       stock: input.stock ?? null,
     });
@@ -53,11 +53,7 @@ export class MenuService {
 
   async updateDish(id: number, input: UpdateDishInput) {
     await this.assertReferences(input.categoryId, input.allergens);
-    const patch: DishPatch = {
-      ...input,
-      ...(input.allergens && { allergens: [...new Set(input.allergens)] }),
-    };
-    const result = await this.menu.updateDish(id, patch);
+    const result = await this.menu.updateDish(id, input);
     if (result.status === "ok") return result.dish;
     throw result.status === "not_found" ? dishNotFound() : nameTaken();
   }

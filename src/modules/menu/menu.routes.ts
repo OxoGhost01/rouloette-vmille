@@ -5,6 +5,7 @@ import type { MenuController } from "./menu.controller.js";
 // Lecture publique de la carte ; écriture réservée à l'administratrice.
 export function menuRoutes(c: MenuController, auth: Auth) {
   const router = Router();
+  const admin = [auth.requireAuth, auth.requireRole("ADMIN")];
   router.get("/health", (_req, res) => {
     res.json({ status: "ok" });
   });
@@ -12,8 +13,8 @@ export function menuRoutes(c: MenuController, auth: Auth) {
   router.get("/allergens", c.listAllergens);
   router.get("/dishes", c.listDishes);
   router.get("/dishes/:id", c.getDish);
-  router.post("/dishes", auth.requireAuth, auth.requireRole("ADMIN"), c.createDish);
-  router.patch("/dishes/:id", auth.requireAuth, auth.requireRole("ADMIN"), c.updateDish);
-  router.delete("/dishes/:id", auth.requireAuth, auth.requireRole("ADMIN"), c.deleteDish);
+  router.post("/dishes", ...admin, c.createDish);
+  router.patch("/dishes/:id", ...admin, c.updateDish);
+  router.delete("/dishes/:id", ...admin, c.deleteDish);
   return router;
 }

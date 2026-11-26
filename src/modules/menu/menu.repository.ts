@@ -1,5 +1,13 @@
 import type { PrismaClient } from "../../generated/prisma/client.js";
-import type { AllergenRecord, CategoryRecord, DishFilter, DishPatch, DishRecord, NewDish } from "./menu.dto.js";
+import type {
+  AllergenRecord,
+  CategoryRecord,
+  DishFilter,
+  DishPatch,
+  DishRecord,
+  DishSnapshot,
+  NewDish,
+} from "./menu.dto.js";
 
 export type DishWrite = { status: "ok"; dish: DishRecord } | { status: "name_taken" | "not_found" };
 export type DishDelete = "deleted" | "not_found" | "ordered";
@@ -10,6 +18,7 @@ export interface MenuRepository {
   listAllergens(): Promise<AllergenRecord[]>;
   findDishes(filter: DishFilter): Promise<{ items: DishRecord[]; total: number }>;
   findDishById(id: number): Promise<DishRecord | null>;
+  findDishesByIds(ids: number[]): Promise<DishSnapshot[]>;
   createDish(data: NewDish): Promise<DishWrite>;
   updateDish(id: number, patch: DishPatch): Promise<DishWrite>;
   deleteDish(id: number): Promise<DishDelete>;
@@ -56,6 +65,13 @@ export class PrismaMenuRepository implements MenuRepository {
 
   findDishById(id: number) {
     return this.prisma.dish.findUnique({ where: { id }, include: dishInclude });
+  }
+
+  findDishesByIds(ids: number[]) {
+    return this.prisma.dish.findMany({
+      where: { id: { in: ids } },
+      select: { id: true, name: true, priceCents: true, available: true },
+    });
   }
 
   async createDish({ allergens, ...data }: NewDish): Promise<DishWrite> {
@@ -141,6 +157,10 @@ export class InMemoryMenuRepository implements MenuRepository {
 
   async findDishById(id: number) {
     return this.dishes.find((d) => d.id === id) ?? null;
+  }
+
+  async findDishesByIds(ids: number[]) {
+    return this.dishes.filter((d) => ids.includes(d.id));
   }
 
   private toRecord(id: number, data: NewDish): DishRecord {

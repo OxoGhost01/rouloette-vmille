@@ -1,7 +1,6 @@
 import type { PrismaClient } from "../../generated/prisma/client.js";
 import type {
   CreateOrderResult,
-  DishSnapshot,
   NewOrder,
   OrderFilter,
   OrderRecord,
@@ -18,11 +17,6 @@ export interface OrderRepository {
   // Change le statut seulement si la commande est encore à `from` (null sinon : quelqu'un l'a modifiée entre-temps).
   // `restock` remet les portions en stock dans la même transaction (annulation).
   updateStatus(id: number, from: OrderStatus, to: OrderStatus, restock: boolean): Promise<OrderRecord | null>;
-}
-
-// Lecture des plats nécessaire pour passer commande (prix et disponibilité viennent de la base)
-export interface DishReader {
-  findByIds(ids: number[]): Promise<DishSnapshot[]>;
 }
 
 const orderInclude = {
@@ -142,17 +136,6 @@ export class PrismaOrderRepository implements OrderRepository {
   }
 }
 
-export class PrismaDishReader implements DishReader {
-  constructor(private readonly prisma: PrismaClient) {}
-
-  findByIds(ids: number[]) {
-    return this.prisma.dish.findMany({
-      where: { id: { in: ids } },
-      select: { id: true, name: true, priceCents: true, available: true },
-    });
-  }
-}
-
 // Pour les tests sans base
 export class InMemoryOrderRepository implements OrderRepository {
   private orders: OrderRecord[] = [];
@@ -220,13 +203,5 @@ export class InMemoryOrderRepository implements OrderRepository {
       .filter((o) => !f.statuses || f.statuses.includes(o.status))
       .sort((a, b) => sign * (a.createdAt.getTime() - b.createdAt.getTime() || a.id - b.id));
     return { items: all.slice(f.skip, f.skip + f.take), total: all.length };
-  }
-}
-
-export class InMemoryDishReader implements DishReader {
-  constructor(private readonly dishes: DishSnapshot[] = []) {}
-
-  async findByIds(ids: number[]) {
-    return this.dishes.filter((d) => ids.includes(d.id));
   }
 }

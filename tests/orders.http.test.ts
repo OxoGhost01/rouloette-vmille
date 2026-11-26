@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { createApp } from "../src/app.js";
 import { loadConfig } from "../src/config.js";
 import { createTestContainer } from "../src/container.js";
-import { InMemoryDishReader } from "../src/modules/orders/orders.repository.js";
+import { menuWith } from "./support.js";
 
 const config = loadConfig({ DATABASE_URL: "file:./test.db", JWT_SECRET: "test-secret-0123456789" });
 const dishes = [
@@ -21,7 +21,7 @@ async function signup(email: string) {
 }
 
 beforeEach(() => {
-  app = createApp(createTestContainer(config, { orderDishes: new InMemoryDishReader(dishes) }));
+  app = createApp(createTestContainer(config, { menu: menuWith(dishes) }));
 });
 
 describe("POST /orders", () => {

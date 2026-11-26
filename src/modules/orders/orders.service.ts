@@ -1,18 +1,20 @@
 import type { AuthUser } from "../../fourni/auth/index.js";
 import { HttpError } from "../../shared/errors.js";
+import { pageWindow, toPage } from "../../shared/pagination.js";
+import type { MenuRepository } from "../menu/menu.repository.js";
 import { canTransition, customerCanCancel } from "./order-status.js";
 import type { ListOrdersQuery, OrderLine, OrderStatus, PlaceOrderInput } from "./orders.dto.js";
-import type { DishReader, OrderRepository } from "./orders.repository.js";
+import type { OrderRepository } from "./orders.repository.js";
 
 // Aucune notion HTTP (req / res) ici : le service ne reçoit que des données.
 export class OrderService {
   constructor(
     private readonly orders: OrderRepository,
-    private readonly dishes: DishReader,
+    private readonly dishes: Pick<MenuRepository, "findDishesByIds">,
   ) {}
 
   async place(user: AuthUser, input: PlaceOrderInput) {
-    const found = new Map((await this.dishes.findByIds(input.items.map((i) => i.dishId))).map((d) => [d.id, d]));
+    const found = new Map((await this.dishes.findDishesByIds(input.items.map((i) => i.dishId))).map((d) => [d.id, d]));
 
     // Tous les plats refusés sont signalés d'un coup
     const refused = input.items.flatMap(({ dishId }) => {
@@ -43,10 +45,9 @@ export class OrderService {
       userId: user.role === "CUSTOMER" ? user.id : undefined,
       statuses: query.status,
       newestFirst: query.sort === "-createdAt",
-      skip: (query.page - 1) * query.pageSize,
-      take: query.pageSize,
+      ...pageWindow(query),
     });
-    return { items, total, page: query.page, pageSize: query.pageSize };
+    return toPage(items, total, query);
   }
 
   // Un client ne voit que ses commandes : celle d'un autre répond 404, pas 403
