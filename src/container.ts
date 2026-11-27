@@ -1,6 +1,7 @@
 import type { Router } from "express";
 import type { Config } from "./config.js";
 import { createAuth } from "./fourni/auth/index.js";
+import { docsRoutes } from "./modules/docs/docs.routes.js";
 import { EventsController } from "./modules/events/events.controller.js";
 import { SseHub } from "./modules/events/events.hub.js";
 import { eventRoutes } from "./modules/events/events.routes.js";
@@ -39,6 +40,7 @@ import { PaymentService } from "./modules/payments/payment.service.js";
 import { InMemoryUserRepository, PrismaUserRepository, type UserRepository } from "./modules/users/user.repository.js";
 import { EventBus } from "./shared/event-bus.js";
 import { createLogger, type Logger } from "./shared/logger.js";
+import { loadOpenApiSpec } from "./shared/openapi.js";
 import { getPrisma } from "./shared/prisma.js";
 import { staticUploads } from "./shared/static-uploads.js";
 
@@ -88,6 +90,7 @@ export function createContainer(config: Config, overrides: Overrides = {}) {
     ["/orders", paymentRoutes(new PaymentController(new PaymentService(orderService, orders, payments, orderEvents)), auth)],
     ["/events", eventRoutes(new EventsController(sseHub), auth)],
     ["/uploads", staticUploads(config.UPLOAD_DIR)],
+    ["/docs", docsRoutes(loadOpenApiSpec())],
   ];
 
   return { config, auth, logger, routes };
