@@ -16,6 +16,9 @@ export type OrderRecord = {
   items: OrderLine[];
 };
 
+// Événement annoncé sur le bus : le service des commandes ne sait pas qui l'écoute
+export type OrderEvent = { type: "order.created" | "order.updated"; order: OrderRecord };
+
 // Ce que le client demande : le prix et le total viennent de la base, jamais de lui
 export type PlaceOrder = { items: { dishId: number; quantity: number }[]; note?: string };
 

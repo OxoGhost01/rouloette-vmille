@@ -2,11 +2,13 @@ import express from "express";
 import type { Container } from "./container.js";
 import { authErrorHandler, installSecurity } from "./fourni/auth/index.js";
 import { errorHandler, notFoundHandler } from "./shared/errors.js";
+import { requestLogger } from "./shared/logger.js";
 
-// L'ordre compte : sécurité -> routes -> 404 -> erreurs du module fourni -> erreurs de l'API
+// L'ordre compte : journal des requêtes -> sécurité -> routes -> 404 -> erreurs du module fourni -> erreurs de l'API
 export function createApp(container: Container) {
   const app = express();
 
+  app.use(requestLogger(container.logger));
   installSecurity(app, { corsOrigin: container.config.CORS_ORIGIN });
 
   app.use("/auth", container.auth.router);

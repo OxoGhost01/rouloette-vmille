@@ -1,9 +1,10 @@
 import type { AuthUser } from "../../fourni/auth/index.js";
+import { EventBus } from "../../shared/event-bus.js";
 import { HttpError } from "../../shared/http-error.js";
 import { pageWindow, toPage } from "../../shared/pagination.js";
 import type { MenuRepository } from "../menu/menu.repository.js";
 import { canTransition, customerCanCancel } from "./order-status.js";
-import type { OrderLine, OrderSearch, OrderStatus, PlaceOrder } from "./orders.model.js";
+import type { OrderEvent, OrderLine, OrderSearch, OrderStatus, PlaceOrder } from "./orders.model.js";
 import type { OrderRepository } from "./orders.repository.js";
 
 // Aucune notion HTTP (req / res) ici : le service ne reçoit que des données.
@@ -11,6 +12,7 @@ export class OrderService {
   constructor(
     private readonly orders: OrderRepository,
     private readonly dishes: Pick<MenuRepository, "findDishesByIds">,
+    private readonly events: Pick<EventBus<OrderEvent>, "publish"> = new EventBus<OrderEvent>(),
   ) {}
 
   async place(user: AuthUser, input: PlaceOrder) {
@@ -37,6 +39,7 @@ export class OrderService {
     if ("shortages" in result) {
       throw new HttpError(409, "OUT_OF_STOCK", "Stock insuffisant", result.shortages);
     }
+    this.events.publish({ type: "order.created", order: result.order });
     return result.order;
   }
 
@@ -73,6 +76,7 @@ export class OrderService {
     // Annuler remet les portions en stock, dans la même transaction que le changement de statut
     const updated = await this.orders.updateStatus(id, order.status, status, status === "CANCELLED");
     if (!updated) throw invalidTransition(order.status, status); // modifiée entre-temps par quelqu'un d'autre
+    this.events.publish({ type: "order.updated", order: updated });
     return updated;
   }
 }
