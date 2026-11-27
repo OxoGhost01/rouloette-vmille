@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { DishFilter } from "../../src/modules/menu/menu.model.js";
+import { InMemoryDishImageStorage } from "../../src/modules/menu/dish-image.storage.js";
 import type { MenuRepository } from "../../src/modules/menu/menu.repository.js";
 import { MenuService } from "../../src/modules/menu/menu.service.js";
 
@@ -13,6 +14,7 @@ function fakeRepo(overrides: Partial<MenuRepository> = {}): MenuRepository {
     findDishesByIds: async () => [],
     createDish: async () => ({ status: "not_found" }),
     updateDish: async () => ({ status: "not_found" }),
+    setDishImage: async () => ({ status: "not_found" }),
     deleteDish: async () => "not_found",
     ...overrides,
   };
@@ -21,7 +23,7 @@ function fakeRepo(overrides: Partial<MenuRepository> = {}): MenuRepository {
 describe("MenuService", () => {
   it("transforme la recherche et la pagination en filtre repository", async () => {
     const findDishes = vi.fn(async (_f: DishFilter) => ({ items: [], total: 0 }));
-    const service = new MenuService(fakeRepo({ findDishes }));
+    const service = new MenuService(fakeRepo({ findDishes }), new InMemoryDishImageStorage());
 
     const result = await service.listDishes({
       allergenFree: ["gluten", "lait"],

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { DishRecord } from "../../src/modules/menu/menu.model.js";
+import { InMemoryDishImageStorage } from "../../src/modules/menu/dish-image.storage.js";
 import { InMemoryMenuRepository } from "../../src/modules/menu/menu.repository.js";
 import { MenuService } from "../../src/modules/menu/menu.service.js";
 
@@ -25,7 +26,7 @@ function setup(orderedDishIds: number[] = []) {
     dishes: [brownie],
     orderedDishIds,
   });
-  return { repo, service: new MenuService(repo) };
+  return { repo, service: new MenuService(repo, new InMemoryDishImageStorage()) };
 }
 
 describe("MenuService : administration de la carte", () => {

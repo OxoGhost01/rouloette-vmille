@@ -7,6 +7,8 @@ const envSchema = z.object({
   JWT_EXPIRES_IN: z.string().default("2h"),
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"]).default("info"),
   CORS_ORIGIN: z.string().min(1).default("http://localhost:5173"),
+  UPLOAD_DIR: z.string().min(1).default("uploads"),
+  MENU_CACHE_TTL_MS: z.coerce.number().int().min(0).default(30_000),
 });
 
 export type Config = z.infer<typeof envSchema>;

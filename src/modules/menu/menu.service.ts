@@ -1,11 +1,17 @@
+import { randomUUID } from "node:crypto";
 import { HttpError } from "../../shared/http-error.js";
 import { pageWindow, toPage } from "../../shared/pagination.js";
-import type { DishInput, DishPatch, DishSearch } from "./menu.model.js";
+import type { DishImageStorage } from "./dish-image.storage.js";
+import { detectImageExtension } from "./image-type.js";
+import type { DishImageUpload, DishInput, DishPatch, DishSearch } from "./menu.model.js";
 import type { MenuRepository } from "./menu.repository.js";
 
 // Aucune notion HTTP (req / res) ici : le service ne reçoit que des données.
 export class MenuService {
-  constructor(private readonly menu: MenuRepository) {}
+  constructor(
+    private readonly menu: MenuRepository,
+    private readonly images: DishImageStorage,
+  ) {}
 
   listCategories() {
     return this.menu.listCategories();
@@ -52,6 +58,27 @@ export class MenuService {
     const result = await this.menu.updateDish(id, patch);
     if (result.status === "ok") return result.dish;
     throw result.status === "not_found" ? dishNotFound() : nameTaken();
+  }
+
+  // Remplace la photo d'un plat : le contenu est vérifié, le nom de fichier est choisi par le serveur
+  async replaceDishImage(id: number, upload: DishImageUpload) {
+    const dish = await this.getDish(id);
+
+    const extension = await detectImageExtension(upload.buffer);
+    if (!extension) {
+      throw new HttpError(415, "UNSUPPORTED_MEDIA_TYPE", "Le fichier doit être une image PNG, JPEG ou WebP");
+    }
+
+    const url = await this.images.save(`${randomUUID()}.${extension}`, upload.buffer);
+    const result = await this.menu.setDishImage(id, url);
+    if (result.status !== "ok") {
+      await this.images.remove(url); // le plat a disparu entre-temps : pas de fichier orphelin
+      throw dishNotFound();
+    }
+
+    // Une ancienne photo impossible à supprimer reste un fichier orphelin inoffensif : elle ne doit pas faire échouer l'envoi
+    if (dish.imageUrl) await this.images.remove(dish.imageUrl).catch(() => {});
+    return result.dish;
   }
 
   async deleteDish(id: number) {

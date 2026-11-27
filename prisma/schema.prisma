@@ -53,6 +53,8 @@ model Dish {
   available   Boolean     @default(true)
   // Portions restantes ; null = illimité
   stock       Int?
+  // Chemin relatif à l'API de la photo (ex. /uploads/dishes/<uuid>.webp), null sans photo
+  imageUrl    String?
   categoryId  Int
   category    Category    @relation(fields: [categoryId], references: [id])
   allergens   Allergen[]

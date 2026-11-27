@@ -20,6 +20,7 @@ export interface MenuRepository {
   findDishesByIds(ids: number[]): Promise<DishSnapshot[]>;
   createDish(data: NewDish): Promise<DishWrite>;
   updateDish(id: number, patch: DishPatch): Promise<DishWrite>;
+  setDishImage(id: number, imageUrl: string): Promise<DishWrite>;
   deleteDish(id: number): Promise<DishDelete>;
 }
 
@@ -96,6 +97,16 @@ export class PrismaMenuRepository implements MenuRepository {
       return { status: "ok", dish };
     } catch (error) {
       if (hasCode(error, "P2002")) return { status: "name_taken" };
+      if (hasCode(error, "P2025")) return { status: "not_found" };
+      throw error;
+    }
+  }
+
+  async setDishImage(id: number, imageUrl: string): Promise<DishWrite> {
+    try {
+      const dish = await this.prisma.dish.update({ where: { id }, data: { imageUrl }, include: dishInclude });
+      return { status: "ok", dish };
+    } catch (error) {
       if (hasCode(error, "P2025")) return { status: "not_found" };
       throw error;
     }
@@ -192,7 +203,16 @@ export class InMemoryMenuRepository implements MenuRepository {
     const index = this.dishes.findIndex((d) => d.id === id);
     if (index === -1) return { status: "not_found" };
     if (patch.name && this.dishes.some((d) => d.id !== id && d.name === patch.name)) return { status: "name_taken" };
-    const dish = this.toRecord(id, { ...this.toNewDish(this.dishes[index]!), ...patch });
+    const current = this.dishes[index]!;
+    const dish = { ...this.toRecord(id, { ...this.toNewDish(current), ...patch }), imageUrl: current.imageUrl };
+    this.dishes[index] = dish;
+    return { status: "ok", dish };
+  }
+
+  async setDishImage(id: number, imageUrl: string): Promise<DishWrite> {
+    const index = this.dishes.findIndex((d) => d.id === id);
+    if (index === -1) return { status: "not_found" };
+    const dish = { ...this.dishes[index]!, imageUrl };
     this.dishes[index] = dish;
     return { status: "ok", dish };
   }

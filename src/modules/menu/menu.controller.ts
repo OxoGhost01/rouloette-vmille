@@ -3,6 +3,7 @@ import { mapPage } from "../../shared/pagination.js";
 import { idParamSchema, parse } from "../../shared/validation.js";
 import {
   createDishSchema,
+  dishImageUploadSchema,
   listDishesQuerySchema,
   toAllergenDto,
   toCategoryDto,
@@ -45,5 +46,11 @@ export class MenuController {
     const { id } = parse(idParamSchema, req.params);
     await this.service.deleteDish(id);
     res.status(204).end();
+  };
+
+  setDishImage = async (req: Request, res: Response) => {
+    const { id } = parse(idParamSchema, req.params);
+    const upload = parse(dishImageUploadSchema, req.file);
+    res.json(toDishDto(await this.service.replaceDishImage(id, upload)));
   };
 }

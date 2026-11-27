@@ -10,9 +10,13 @@ export type DishRecord = {
   priceCents: number;
   available: boolean;
   stock?: number | null;
+  imageUrl?: string | null;
   category: { id: number; name: string };
   allergens: { code: string; label: string }[];
 };
+
+// Fichier reçu pour la photo d'un plat : seuls ses octets comptent, jamais son nom ni son type déclaré
+export type DishImageUpload = { buffer: Buffer };
 
 // Plat tel que le voit une commande : prix et disponibilité suffisent
 export type DishSnapshot = Pick<DishRecord, "id" | "name" | "priceCents" | "available">;

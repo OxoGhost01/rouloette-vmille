@@ -1,6 +1,14 @@
 import { z } from "zod";
 import { paginationShape } from "../../shared/validation.js";
-import type { AllergenRecord, CategoryRecord, DishInput, DishPatch, DishRecord, DishSearch } from "./menu.model.js";
+import type {
+  AllergenRecord,
+  CategoryRecord,
+  DishImageUpload,
+  DishInput,
+  DishPatch,
+  DishRecord,
+  DishSearch,
+} from "./menu.model.js";
 
 // ---- Entrée : schémas stricts, qui produisent directement les types du modèle ----
 
@@ -49,6 +57,12 @@ export const updateDishSchema = z
     message: "Au moins un champ à modifier",
   }) satisfies z.ZodType<DishPatch>;
 
+// Le fichier arrive par multer (req.file) : sans fichier, le formulaire est invalide
+export const dishImageUploadSchema = z.object(
+  { buffer: z.instanceof(Buffer) },
+  { error: "Fichier manquant : champ de formulaire « image » attendu" },
+) satisfies z.ZodType<DishImageUpload>;
+
 // ---- Sortie : chaque champ est choisi explicitement ----
 
 export type CategoryDto = { id: number; name: string; position: number };
@@ -60,6 +74,7 @@ export type DishDto = {
   priceCents: number;
   available: boolean;
   stock: number | null;
+  imageUrl: string | null;
   category: { id: number; name: string };
   allergens: { code: string; label: string }[];
 };
@@ -71,6 +86,7 @@ export const toDishDto = (d: DishRecord): DishDto => ({
   priceCents: d.priceCents,
   available: d.available,
   stock: d.stock ?? null,
+  imageUrl: d.imageUrl ?? null,
   category: { id: d.category.id, name: d.category.name },
   allergens: d.allergens.map((a) => ({ code: a.code, label: a.label })),
 });

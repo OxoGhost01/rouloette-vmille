@@ -38,6 +38,7 @@ describe("DTO de sortie de la carte : seuls les champs du contrat sortent", () =
       priceCents: 450,
       available: true,
       stock: null,
+      imageUrl: null,
       category: { id: 1, name: "Desserts" },
       allergens: [{ code: "gluten", label: "Gluten" }],
     });
