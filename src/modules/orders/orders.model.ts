@@ -2,6 +2,7 @@ import type { PageQuery } from "../../shared/pagination.js";
 
 export const ORDER_STATUSES = ["RECEIVED", "PREPARING", "READY", "PICKED_UP", "CANCELLED"] as const;
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
+export type PaymentStatus = "UNPAID" | "PAID";
 
 export type OrderLine = { dishId: number; name: string; quantity: number; unitPriceCents: number };
 
@@ -10,6 +11,7 @@ export type OrderRecord = {
   status: OrderStatus;
   note: string | null;
   totalCents: number;
+  paymentStatus: PaymentStatus;
   createdAt: Date;
   updatedAt: Date;
   user: { id: number; name: string };

@@ -21,6 +21,11 @@ enum OrderStatus {
   CANCELLED
 }
 
+enum PaymentStatus {
+  UNPAID
+  PAID
+}
+
 model User {
   id           Int      @id @default(autoincrement())
   email        String   @unique
@@ -66,6 +71,7 @@ model Order {
   status     OrderStatus @default(RECEIVED)
   note       String?
   totalCents Int
+  paymentStatus PaymentStatus @default(UNPAID)
   createdAt  DateTime    @default(now())
   updatedAt  DateTime    @updatedAt
   userId     Int

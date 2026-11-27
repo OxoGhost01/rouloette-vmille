@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { paginationShape } from "../../shared/validation.js";
-import { ORDER_STATUSES, type OrderRecord, type OrderSearch, type OrderStatus, type PlaceOrder } from "./orders.model.js";
+import { ORDER_STATUSES, type OrderRecord, type OrderSearch, type OrderStatus, type PaymentStatus, type PlaceOrder } from "./orders.model.js";
 
 // ---- Entrée : schémas stricts (role, unitPriceCents, totalCents… sont refusés) ----
 
@@ -49,6 +49,7 @@ export type OrderDto = {
   status: OrderStatus;
   note: string | null;
   totalCents: number;
+  paymentStatus: PaymentStatus;
   createdAt: string;
   updatedAt: string;
   customer: { id: number; name: string };
@@ -60,6 +61,7 @@ export const toOrderDto = (o: OrderRecord): OrderDto => ({
   status: o.status,
   note: o.note,
   totalCents: o.totalCents,
+  paymentStatus: o.paymentStatus,
   createdAt: o.createdAt.toISOString(),
   updatedAt: o.updatedAt.toISOString(),
   customer: { id: o.user.id, name: o.user.name },

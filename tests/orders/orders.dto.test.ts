@@ -28,6 +28,7 @@ describe("DTO de sortie des commandes : seuls les champs du contrat sortent", ()
       status: "RECEIVED" as const,
       note: null,
       totalCents: 2300,
+      paymentStatus: "UNPAID" as const,
       createdAt: new Date("2026-11-26T12:00:00Z"),
       updatedAt: new Date("2026-11-26T12:00:00Z"),
       user: { id: 5, name: "Alice", email: "alice@test.fr", passwordHash: "secret" },

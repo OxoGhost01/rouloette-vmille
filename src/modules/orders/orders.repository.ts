@@ -17,6 +17,8 @@ export interface OrderRepository {
   // Change le statut seulement si la commande est encore à `from` (null sinon : quelqu'un l'a modifiée entre-temps).
   // `restock` remet les portions en stock dans la même transaction (annulation).
   updateStatus(id: number, from: OrderStatus, to: OrderStatus, restock: boolean): Promise<OrderRecord | null>;
+  // Passe la commande à PAID seulement si elle est encore UNPAID et non annulée (null sinon)
+  markPaid(id: number): Promise<OrderRecord | null>;
 }
 
 const orderInclude = {
@@ -34,6 +36,7 @@ const toRecord = (o: PrismaOrder): OrderRecord => ({
   status: o.status,
   note: o.note,
   totalCents: o.totalCents,
+  paymentStatus: o.paymentStatus,
   createdAt: o.createdAt,
   updatedAt: o.updatedAt,
   user: o.user,
@@ -111,6 +114,14 @@ export class PrismaOrderRepository implements OrderRepository {
     });
   }
 
+  async markPaid(id: number) {
+    const { count } = await this.prisma.order.updateMany({
+      where: { id, paymentStatus: "UNPAID", status: { not: "CANCELLED" } },
+      data: { paymentStatus: "PAID" },
+    });
+    return count === 0 ? null : this.findById(id);
+  }
+
   async findById(id: number) {
     const order = await this.prisma.order.findUnique({ where: { id }, include: orderInclude });
     return order && toRecord(order);
@@ -164,6 +175,7 @@ export class InMemoryOrderRepository implements OrderRepository {
       status: "RECEIVED",
       note: order.note,
       totalCents: order.totalCents,
+      paymentStatus: "UNPAID",
       createdAt: now,
       updatedAt: now,
       user: { id: order.userId, name: this.userName(order.userId) },
@@ -189,6 +201,14 @@ export class InMemoryOrderRepository implements OrderRepository {
         if (stock !== null) this.stocks.set(dishId, stock + quantity);
       }
     }
+    return order;
+  }
+
+  async markPaid(id: number) {
+    const order = this.orders.find((o) => o.id === id);
+    if (!order || order.paymentStatus === "PAID" || order.status === "CANCELLED") return null;
+    order.paymentStatus = "PAID";
+    order.updatedAt = new Date();
     return order;
   }
 

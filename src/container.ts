@@ -30,6 +30,12 @@ import {
 import { orderRoutes } from "./modules/orders/orders.routes.js";
 import type { OrderEvent } from "./modules/orders/orders.model.js";
 import { OrderService } from "./modules/orders/orders.service.js";
+import { PaymentController } from "./modules/payments/payment.controller.js";
+import { FakePaymentGateway } from "./modules/payments/payment.fake-gateway.js";
+import { createPaymentGateway } from "./modules/payments/payment.factory.js";
+import type { PaymentGateway } from "./modules/payments/payment.gateway.js";
+import { paymentRoutes } from "./modules/payments/payment.routes.js";
+import { PaymentService } from "./modules/payments/payment.service.js";
 import { InMemoryUserRepository, PrismaUserRepository, type UserRepository } from "./modules/users/user.repository.js";
 import { EventBus } from "./shared/event-bus.js";
 import { createLogger, type Logger } from "./shared/logger.js";
@@ -45,6 +51,7 @@ export type Overrides = {
   orders?: OrderRepository;
   health?: HealthRepository;
   images?: DishImageStorage;
+  payments?: PaymentGateway;
   logger?: Logger;
 };
 
@@ -57,6 +64,7 @@ export function createContainer(config: Config, overrides: Overrides = {}) {
   const orders = overrides.orders ?? new PrismaOrderRepository(prisma());
   const health = overrides.health ?? new PrismaHealthRepository(prisma());
   const images = overrides.images ?? new DiskDishImageStorage(config.UPLOAD_DIR);
+  const payments = overrides.payments ?? createPaymentGateway(config);
   const logger = overrides.logger ?? createLogger(config.LOG_LEVEL);
 
   // Observer : les commandes annoncent leurs événements, le flux SSE et le cache de la carte s'y abonnent
@@ -71,10 +79,13 @@ export function createContainer(config: Config, overrides: Overrides = {}) {
 
   const auth = createAuth({ users, jwtSecret: config.JWT_SECRET, jwtExpiresIn: config.JWT_EXPIRES_IN });
 
+  const orderService = new OrderService(orders, menu, orderEvents);
+
   const routes: Array<[path: string, router: Router]> = [
     ["/", healthRoutes(new HealthController(new HealthService(health)))],
     ["/", menuRoutes(new MenuController(new MenuService(menu, images)), auth)],
-    ["/orders", orderRoutes(new OrderController(new OrderService(orders, menu, orderEvents)), auth)],
+    ["/orders", orderRoutes(new OrderController(orderService), auth)],
+    ["/orders", paymentRoutes(new PaymentController(new PaymentService(orderService, orders, payments, orderEvents)), auth)],
     ["/events", eventRoutes(new EventsController(sseHub), auth)],
     ["/uploads", staticUploads(config.UPLOAD_DIR)],
   ];
@@ -91,6 +102,7 @@ export function createTestContainer(config: Config, overrides: Overrides = {}) {
     menu: new InMemoryMenuRepository(),
     orders: new InMemoryOrderRepository(),
     health: new InMemoryHealthRepository(),
+    payments: new FakePaymentGateway(),
     logger: createLogger("silent"),
     ...overrides,
   });
